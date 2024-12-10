@@ -5,12 +5,12 @@ import json
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from torchvision import models
 from torch_cka import CKA
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
+from utils import load_model, tensor_to_json_compatible
 
 def seed_worker(worker_id):
     worker_seed = torch.initial_seed() % 2**32
@@ -22,35 +22,10 @@ g.manual_seed(0)
 np.random.seed(0)
 random.seed(0)
 
-def tensor_to_json_compatible(obj):
-    if isinstance(obj, torch.Tensor):
-        return obj.item() if obj.numel() == 1 else obj.tolist()
-    elif isinstance(obj, dict):
-        return {key: tensor_to_json_compatible(value) for key, value in obj.items()}
-    elif isinstance(obj, list):
-        return [tensor_to_json_compatible(item) for item in obj]
-    else:
-        return obj
     
 def filter_layers(layer):
     return 'relu' in layer or 'avgpool' in layer or 'fc' in layer
     
-def modify_state_dict(state_dict):
-    new_state_dict = {}
-    for key, value in state_dict.items():
-        if key.startswith("encoder."):
-            new_key = key.replace("encoder.", "")  
-            new_state_dict[new_key] = value
-    return new_state_dict
-
-def load_model(ckpt_path):
-    checkpoint = torch.load(ckpt_path, map_location=torch.device('cpu'))
-    state_dict = checkpoint["state_dict"]
-    model = models.resnet50()  
-    model.load_state_dict(modify_state_dict(state_dict))  
-    model.eval()
-    return model  
-
 transform = transforms.Compose([
     transforms.Resize(224), 
     transforms.ToTensor(),
@@ -66,10 +41,10 @@ dataloader = DataLoader(
     generator=g,
 )
 
-model1_name = 'ResNet50 InfoNCE loss'
-model2_name = 'ResNet50 Kernel-InfoNCE loss'
-model1_ckpt= '/dss/dsshome1/lxc03/apdl006/thesis/code/Kernel-InfoNCE/Kernel-InfoNCE/eternal-durian-89/checkpoints/epoch=387-step=64796.ckpt' 
-model2_ckpt = '/dss/dsshome1/lxc03/apdl006/thesis/code/Kernel-InfoNCE/Kernel-InfoNCE/wobbly-snowball-90/checkpoints/epoch=333-step=55778.ckpt'
+model1_name = 'ResNet18 InfoNCE loss'
+model2_name = 'ResNet18 Kernel-InfoNCE loss'
+model1_ckpt= '/dss/dsshome1/lxc03/apdl006/thesis/code/Kernel-InfoNCE/Kernel-InfoNCE/sparkling-plasma-91/checkpoints/epoch=367-step=61456.ckpt' 
+model2_ckpt = '/dss/dsshome1/lxc03/apdl006/thesis/code/Kernel-InfoNCE/Kernel-InfoNCE/likely-surf-92/checkpoints/epoch=360-step=60287.ckpt'
 model_nt_xent = load_model(model1_ckpt) 
 model_origin = load_model(model2_ckpt)
 
@@ -94,7 +69,7 @@ cka.compare(dataloader)
 results = cka.export()
 
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-folder_name = os.path.join("results", timestamp)
+folder_name = os.path.join("results/cka", timestamp)
 os.makedirs(folder_name, exist_ok=True)
 save_path = os.path.join(folder_name, "cka_heatmap.png")
 cka.plot_results(save_path=save_path)
