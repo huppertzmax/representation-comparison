@@ -29,6 +29,10 @@ parser = ArgumentParser()
 parser.add_argument("--epochs", type=int, default=20)
 parser.add_argument("--batchsize", type=int, default=128)
 parser.add_argument("--optimizer", type=str, default="adam", help="adam or sgd")
+parser.add_argument("--model1_name", type=str, default="ResNet18 InfoNCE loss")
+parser.add_argument("--model2_name", type=str, default="ResNet18 Kernel-InfoNCE loss")
+parser.add_argument("--model1_path", type=str, default="/dss/dsshome1/lxc03/apdl006/thesis/code/Kernel-InfoNCE/Kernel-InfoNCE/sparkling-plasma-91/checkpoints/epoch=367-step=61456.ckpt")
+parser.add_argument("--model2_path", type=str, default="/dss/dsshome1/lxc03/apdl006/thesis/code/Kernel-InfoNCE/Kernel-InfoNCE/likely-surf-92/checkpoints/epoch=360-step=60287.ckpt")
 
 args = parser.parse_args()
 
@@ -36,16 +40,17 @@ batchsize = args.batchsize
 epochs = args.epochs
 optimizer_type = args.optimizer
 
-model1_name = 'ResNet18 InfoNCE loss'
-model2_name = 'ResNet18 Kernel-InfoNCE loss'
-model1_ckpt= '/dss/dsshome1/lxc03/apdl006/thesis/code/Kernel-InfoNCE/Kernel-InfoNCE/sparkling-plasma-91/checkpoints/epoch=367-step=61456.ckpt' 
-model2_ckpt = '/dss/dsshome1/lxc03/apdl006/thesis/code/Kernel-InfoNCE/Kernel-InfoNCE/likely-surf-92/checkpoints/epoch=360-step=60287.ckpt'
+model1_name = args.model1_name
+model2_name = args.model2_name
+model1_ckpt=  args.model1_path
+model2_ckpt = args.model2_path
 
 wandb.init(project='representation-comparison', 
            config={'dataset': 'cifar10', 'arch': 'resnet18', 
                    'model1': model1_name, 'model1_ckpt': model1_ckpt,
                    'model2': model2_name, 'model2_ckpt': model2_ckpt,
-                   'batchsize': batchsize, 'epochs': epochs})
+                   'batchsize': batchsize, 'epochs': epochs, 
+                   'optimizer': optimizer_type})
 
 
 transform = transforms.Compose([
@@ -123,12 +128,6 @@ for epoch in range(epochs):
 
         train_loss_values.append(loss.item())
         train_loss_normed_values.append(loss_normed)
-        
-        #print(rep1_mapped.size())
-        #print(rep2.size())
-        #print(la.norm(torch.sub(rep1_mapped, rep2)))
-        #print(torch.div(la.norm(torch.sub(rep1_mapped, rep2)), la.norm(rep2)))
-        #print(loss.item())
         
         wandb.log({"train_loss": loss.item()})
         wandb.log({"train_loss_normed": loss_normed.item()})
