@@ -3,13 +3,15 @@ import torch
 import random
 import torchvision
 import torchvision.transforms as transforms
+from argparse import ArgumentParser
 from torch.utils.data import DataLoader
 import numpy as np
 from datetime import datetime
-from utils import load_model, tensor_to_json_compatible
+from utils import load_model
 import torch.nn as nn
 import wandb
 from tqdm import tqdm
+import torch.linalg as la
 
 def seed_worker(worker_id):
     worker_seed = torch.initial_seed() % 2**32
@@ -21,8 +23,18 @@ g.manual_seed(0)
 np.random.seed(0)
 random.seed(0)
 
-batchsize = 256
-epochs = 10
+
+parser = ArgumentParser()
+
+parser.add_argument("--epochs", type=int, default=20)
+parser.add_argument("--batchsize", type=int, default=128)
+parser.add_argument("--optimizer", type=str, default="adam", help="adam or sgd")
+
+args = parser.parse_args()
+
+batchsize = args.batchsize
+epochs = args.epochs
+optimizer_type = args.optimizer
 
 model1_name = 'ResNet18 InfoNCE loss'
 model2_name = 'ResNet18 Kernel-InfoNCE loss'
@@ -68,62 +80,87 @@ class LinearMap(nn.Module):
     def forward(self, x):
         return self.linear(x)
 
-model_nt_xent = load_model(model1_ckpt) 
-model_origin = load_model(model2_ckpt)
+model1 = load_model(model1_ckpt) 
+model2 = load_model(model2_ckpt)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f'Using: {device} as device')
 
 representation_dim = 1000
 linear_map = LinearMap(representation_dim).to(device)
-model_nt_xent = model_nt_xent.to(device)
-model_origin = model_origin.to(device)
+model1 = model1.to(device)
+model2 = model2.to(device)
 
 criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(linear_map.parameters(), lr=1e-3)
+if optimizer_type == "adam":
+    optimizer = torch.optim.Adam(linear_map.parameters(), lr=1e-3)
+elif optimizer_type == "sgd": 
+    optimizer = torch.optim.SGD(linear_map.parameters(), lr=1e-3, momentum=0.9)
 
 for epoch in range(epochs):  
     wandb.log({"epoch": epoch})
 
     linear_map.train()
     train_loss_values = []
+    train_loss_normed_values = []
     train_progress_bar = tqdm(dataloader_train, desc=f"Epoch {epoch+1}/{epochs} - Training", leave=False)
     for idx, (images, labels) in enumerate(train_progress_bar):
         images = images.to(device)
         
         with torch.no_grad():
-            rep1 = model_nt_xent(images) 
-            rep2 = model_origin(images) 
+            rep1 = model1(images) 
+            rep2 = model2(images) 
         
         rep1_mapped = linear_map(rep1)
         loss = criterion(rep1_mapped, rep2)
-        train_loss_values.append(loss.item())
-        wandb.log({"train_loss": loss.item()})
-        
-        train_progress_bar.set_postfix(loss=loss.item())
-        
+        norm = la.norm(rep2)
+        loss_normed = torch.div(loss, norm)
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        train_progress_bar.set_postfix(loss=loss.item(), loss_normed=loss_normed.item(), norm=norm.item())
+
+        train_loss_values.append(loss.item())
+        train_loss_normed_values.append(loss_normed)
+        
+        #print(rep1_mapped.size())
+        #print(rep2.size())
+        #print(la.norm(torch.sub(rep1_mapped, rep2)))
+        #print(torch.div(la.norm(torch.sub(rep1_mapped, rep2)), la.norm(rep2)))
+        #print(loss.item())
+        
+        wandb.log({"train_loss": loss.item()})
+        wandb.log({"train_loss_normed": loss_normed.item()})
 
     
     test_loss_values = []
+    test_loss_normed_values = []
     linear_map.eval()
     with torch.no_grad():
         test_progress_bar = tqdm(dataloader_test, desc="Testing", leave=False)
         for idx, (images, labels) in enumerate(test_progress_bar):
             images = images.to(device)
 
-            rep1 = model_nt_xent(images)
-            rep2 = model_origin(images)
+            rep1 = model1(images)
+            rep2 = model2(images)
             rep1_mapped = linear_map(rep1)
             test_loss = criterion(rep1_mapped, rep2)
-            test_loss_values.append(test_loss.item())
-            wandb.log({"test_loss": test_loss.item()})
-            test_progress_bar.set_postfix(test_loss=test_loss.item())
+            test_norm = la.norm(rep2)
+            test_loss_normed = torch.div(test_loss, test_norm)
 
-    wandb.log({"train_loss_avg_epoch": sum(train_loss_values)/len(train_loss_values)})
-    wandb.log({"test_loss_avg_epoch": sum(test_loss_values)/len(test_loss_values)})
+            test_loss_values.append(test_loss.item())
+            test_loss_normed_values.append(test_loss_normed)
+
+            wandb.log({"test_loss": test_loss.item()})
+            wandb.log({"test_loss_normed": test_loss_normed.item()})
+
+            test_progress_bar.set_postfix(test_loss=test_loss.item(), test_loss_normed=loss_normed.item(), norm=test_norm.item())
+
+    wandb.log({"train_loss_epoch": sum(train_loss_values)/len(train_loss_values)})
+    wandb.log({"train_loss_normed_epoch": sum(train_loss_normed_values)/len(train_loss_normed_values)})
+    wandb.log({"test_loss_epoch": sum(test_loss_values)/len(test_loss_values)})
+    wandb.log({"test_loss_normed_epoch": sum(test_loss_normed_values)/len(test_loss_normed_values)})
 
 
 
