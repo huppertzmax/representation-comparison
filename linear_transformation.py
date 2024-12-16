@@ -118,7 +118,7 @@ for epoch in range(epochs):
         
         rep1_mapped = linear_map(rep1)
         loss = criterion(rep1_mapped, rep2)
-        norm = torch.div(torch.sum(torch.square(la.norm(rep2, dim=1))), rep2.size(dim=0))
+        norm = torch.mean(torch.square(la.norm(rep2, dim=1)))
         loss_normed = torch.div(loss, norm)
 
         optimizer.zero_grad()
