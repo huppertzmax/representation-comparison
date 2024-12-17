@@ -145,7 +145,7 @@ for epoch in range(epochs):
             rep2 = model2(images)
             rep1_mapped = linear_map(rep1)
             test_loss = criterion(rep1_mapped, rep2)
-            test_norm = la.norm(rep2)
+            test_norm = torch.mean(torch.square(la.norm(rep2, dim=1)))
             test_loss_normed = torch.div(test_loss, test_norm)
 
             test_loss_values.append(test_loss.item())
