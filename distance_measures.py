@@ -29,7 +29,7 @@ os.makedirs(folder_name, exist_ok=True)
 
 parser = ArgumentParser()
 
-parser.add_argument("--normed_euc", type=bool, default=False)
+parser.add_argument("--normed_euc", type=bool, default=True)
 parser.add_argument("--model1_name", type=str, default="ResNet18 InfoNCE loss")
 parser.add_argument("--model2_name", type=str, default="ResNet18 Kernel-InfoNCE loss")
 parser.add_argument("--model1_path", type=str, default="/dss/dsshome1/lxc03/apdl006/thesis/code/Kernel-InfoNCE/Kernel-InfoNCE/sparkling-plasma-91/checkpoints/epoch=367-step=61456.ckpt")
