@@ -28,15 +28,15 @@ def generate_subset_matrix(matrix, part_size, num_parts, num_samples):
     print("Shape of subset labels", labels.shape)
     return matrix, labels
 
-def run_tsne(matrix, iterations, folder_name):
+def run_tsne(matrix, iterations, metric, folder_name):
     print("\nTSNE starting ...")
     start_time = time.time()
-    tsne = TSNE(n_iter=iterations)
+    tsne = TSNE(n_iter=iterations, metric=metric)
     tsne_results = tsne.fit_transform(matrix)
     np.save(f"{folder_name}/tsne_results.npy", tsne_results)
     end_time = time.time()
     print(f"Runtime for tsne: {end_time - start_time:.6f} seconds")
-    print(f"Saved results under: {folder_name}/tsne_results.py")
+    print(f"Saved results under: {folder_name}/tsne_results.py\n")
     return tsne_results
 
 def visualize_tsne(tsne_results, labels, matrix_name, folder_name):
@@ -47,7 +47,7 @@ def visualize_tsne(tsne_results, labels, matrix_name, folder_name):
     plt.show()
     plt.savefig(f"{folder_name}/tsne.png")
 
-def store_config(timestamp, matrix_name, matrix_path, num_parts, num_samples, part_size, tsne_iter):
+def store_config(timestamp, matrix_name, matrix_path, num_parts, num_samples, part_size, tsne_iter, tsne_metric):
     results = {
         "timestamp": timestamp,
         "matrix_name": matrix_name,
@@ -56,6 +56,7 @@ def store_config(timestamp, matrix_name, matrix_path, num_parts, num_samples, pa
         "num_samples": num_samples,
         "part_size": part_size,
         "tsne_iter": tsne_iter,
+        "tsne_metric": tsne_metric,
     }
 
     with open(folder_name + "/tsne_results.json", 'w') as f:
@@ -70,14 +71,16 @@ if __name__ == "__main__":
 
     parser.add_argument("--matrix_name", type=str, default="Eigenvector matrix - augmentation group block")
     parser.add_argument("--matrix_path", type=str, default="/dss/dsshome1/lxc03/apdl006/thesis/code/ssl/matrices/generated/sparse_matrix_2_048_000/aug_group_block/eigenvectors_k_32.npy")
-    parser.add_argument("--tsne_iter", type=int, default=1000)
+    parser.add_argument("--tsne_iter", type=int, default=3000)
+    parser.add_argument("--tsne_metric", type=str, default='euclidean')
     parser.add_argument("--num_parts", type=int, default=10) # Number of class (10 in case of MNIST)
     parser.add_argument("--num_samples", type=int, default=1024) # Number of rows to sample from each part
 
     args = parser.parse_args()
+    print(args)
 
     matrix, part_size = load_matrix(args.matrix_path, args.num_parts)
     matrix, labels = generate_subset_matrix(matrix, part_size, args.num_parts, args.num_samples)
-    tsne_results = run_tsne(matrix, args.tsne_iter, folder_name)
+    tsne_results = run_tsne(matrix, args.tsne_iter, args.tsne_metric, folder_name)
     visualize_tsne(tsne_results, labels, args.matrix_name, folder_name)
-    store_config(timestamp, args.matrix_name, args.matrix_path, args.num_parts, args.num_samples, part_size, args.tsne_iter)
+    store_config(timestamp, args.matrix_name, args.matrix_path, args.num_parts, args.num_samples, part_size, args.tsne_iter, args.tsne_metric)
