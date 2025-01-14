@@ -16,13 +16,14 @@ os.makedirs(folder_name, exist_ok=True)
 parser = ArgumentParser()
 
 parser.add_argument("--matrix1_name", type=str, default="Embedding matrix")
-parser.add_argument("--matrix2_name", type=str, default="Eigenvector matrix")
+parser.add_argument("--matrix2_name", type=str, default="Eigenvector matrix - augmentation group block")
 parser.add_argument("--matrix1_path", type=str, default="/dss/dsshome1/lxc03/apdl006/thesis/code/ssl/results/embeddings/curious-cosmos-122/chunks/embedding_1024_200.npy")
 parser.add_argument("--matrix2_path", type=str, default="/dss/dsshome1/lxc03/apdl006/thesis/code/ssl/matrices/generated/sparse_matrix_2_048_000/aug_group_block/eigenvectors_k_32.npy")
 parser.add_argument("--num_samples_per_class", type=int, default=1024)
 parser.add_argument("--num_augmentations", type=str, default=200)
 
 args = parser.parse_args()
+print(args)
 
 matrix1_name = args.matrix1_name
 matrix2_name = args.matrix2_name
@@ -46,9 +47,9 @@ def visualize(mean_distances, highest_distances, lowest_distances,
     batches = list(range(1, len(mean_distances) + 1))
 
     plt.figure(figsize=(10, 6))
-    plt.plot(batches, mean_distances, label="Mean Distance", marker="o")
-    plt.plot(batches, highest_distances, label="Highest Distance", marker="^")
-    plt.plot(batches, lowest_distances, label="Lowest Distance", marker="v")
+    plt.plot(batches, mean_distances, label="Mean", marker="o")
+    plt.plot(batches, highest_distances, label="Highest", marker="^")
+    plt.plot(batches, lowest_distances, label="Lowest", marker="v")
 
     plt.xlabel("Batch Number")
     plt.ylabel("Distance")
