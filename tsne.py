@@ -47,7 +47,7 @@ def visualize_tsne(tsne_results, labels, matrix_name, folder_name):
     plt.show()
     plt.savefig(f"{folder_name}/tsne.png")
 
-def store_config(timestamp, matrix_name, matrix_path, num_parts, num_samples, part_size, tsne_iter, tsne_metric):
+def store_config(timestamp, matrix_name, matrix_path, num_parts, num_samples, part_size, tsne_iter, tsne_metric, folder_name):
     results = {
         "timestamp": timestamp,
         "matrix_name": matrix_name,
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
 
-    parser.add_argument("--matrix_name", type=str, default="Eigenvector matrix - augmentation group block")
+    parser.add_argument("--matrix_name", type=str, default="eigenvector matrix - augmentation group block")
     parser.add_argument("--matrix_path", type=str, default="/dss/dsshome1/lxc03/apdl006/thesis/code/ssl/matrices/generated/sparse_matrix_2_048_000/aug_group_block/eigenvectors_k_32.npy")
     parser.add_argument("--tsne_iter", type=int, default=3000)
     parser.add_argument("--tsne_metric", type=str, default='euclidean')
@@ -83,4 +83,4 @@ if __name__ == "__main__":
     matrix, labels = generate_subset_matrix(matrix, part_size, args.num_parts, args.num_samples)
     tsne_results = run_tsne(matrix, args.tsne_iter, args.tsne_metric, folder_name)
     visualize_tsne(tsne_results, labels, args.matrix_name, folder_name)
-    store_config(timestamp, args.matrix_name, args.matrix_path, args.num_parts, args.num_samples, part_size, args.tsne_iter, args.tsne_metric)
+    store_config(timestamp, args.matrix_name, args.matrix_path, args.num_parts, args.num_samples, part_size, args.tsne_iter, args.tsne_metric, folder_name)
