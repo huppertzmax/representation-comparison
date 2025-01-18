@@ -120,7 +120,7 @@ def compute_distances(matrix1, matrix2):
                      "Euclidean distances", folder_name + f"/euc.png")
     
     visualize(normed_euc_dist, normed_euc_max_dist, normed_euc_min_dist,
-                     "Noremd euclidean distances", folder_name + f"/normed_euc.png")
+                     "Normed euclidean distances", folder_name + f"/normed_euc.png")
     
     cos_sim_avg = sum(cos_sim) / len(cos_sim)
     cos_avg = sum(cos_dist) / len(cos_dist)
