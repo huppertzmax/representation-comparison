@@ -8,17 +8,24 @@ import cupy as cp
 
 parser = ArgumentParser()
 
-parser.add_argument("--matrix1_name", type=str, default="Embedding matrix")
-parser.add_argument("--matrix2_name", type=str, default="Eigenvector matrix - augmentation group block")
-parser.add_argument("--matrix1_path", type=str, default="/dss/dsshome1/lxc03/apdl006/thesis/code/ssl/results/embeddings/curious-cosmos-122/chunks/embedding_1024_200.npy")
-parser.add_argument("--matrix2_path", type=str, default="/dss/dsshome1/lxc03/apdl006/thesis/code/ssl/matrices/generated/sparse_matrix_2_048_000/aug_group_block/eigenvectors_k_32.npy")
+parser.add_argument("--matrix2_name", type=str, default="Embedding matrix")
+parser.add_argument("--matrix1_name", type=str, default="Eigenvector matrix - augmentation group block")
+parser.add_argument("--matrix2_path", type=str, default="/dss/dsshome1/lxc03/apdl006/thesis/code/ssl/results/embeddings/curious-cosmos-122/chunks/embedding_1024_200.npy")
+parser.add_argument("--matrix1_path", type=str, default="/dss/dsshome1/lxc03/apdl006/thesis/code/ssl/matrices/generated/sparse_matrix_2_048_000/aug_group_block/eigenvectors_k_32.npy")
+parser.add_argument("--path_suffix", type=str, default="")
+parser.add_argument("--lambda_value", type=float, default=1e-9)
+parser.add_argument("--inverse_tol", type=float, default=1e-12)
 
 args = parser.parse_args()
+print(f"Args: {args}\n")
 
 matrix1_name = args.matrix1_name
 matrix2_name = args.matrix2_name
 matrix1_path=  args.matrix1_path
 matrix2_path = args.matrix2_path
+lambda_value = args.lambda_value
+inverse_tol = args.inverse_tol
+path_suffix = args.path_suffix
 
 A = np.load(matrix1_path)
 B = np.load(matrix2_path)
@@ -30,15 +37,16 @@ print(f"Loaded matrix B: {matrix2_name} with shape {B.shape}\n")
 
 AT = A.T
 ATA = AT @ A
+LambdaI = lambda_value * cp.eye(ATA.shape[0])
 ATB = AT @ B
 
 try:
-    ATA_inv = cp.linalg.inv(ATA)
+    ATA_inv = cp.linalg.inv(ATA+LambdaI)
 except cp.linalg.LinAlgError:
     print("Calculating the pseudo inverse of ATA")
     ATA_inv = cp.linalg.pinv(ATA)
 
-inverse_correct = cp.allclose(ATA @ ATA_inv, cp.eye(ATA.shape[0]), atol=1e-03)
+inverse_correct = cp.allclose(ATA @ ATA_inv, cp.eye(ATA.shape[0]), atol=inverse_tol)
 print(f"Inverse is correct: {inverse_correct}")
 
 T = ATA_inv @ ATB
@@ -55,7 +63,7 @@ print(f"Normed error between B and prediction of B divided by norm of B: {normed
 T = cp.asnumpy(T)
 
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-folder_name = os.path.join("results/linear-transformation", f"{timestamp}-matrices")
+folder_name = os.path.join("results/ridge-regression", f"{timestamp}-matrices_{path_suffix}")
 os.makedirs(folder_name, exist_ok=True)
 save_path = os.path.join(folder_name, "transformation_matrix.npy")
 np.save(save_path, T)
@@ -67,6 +75,9 @@ results = {
     "matrix2_name": matrix2_name,
     "matrix1_path": matrix1_path,
     "matrix2_path": matrix2_path,
+    "lambda_value": lambda_value,
+    "inverse_correct": str(inverse_correct), 
+    "inverse_tol": inverse_tol,
     "frobenius_norm": error.item(),
     "frobenius_norm_relativ": normed_error.item(),
 }
